@@ -1,0 +1,10 @@
+# 编译产物
+build/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

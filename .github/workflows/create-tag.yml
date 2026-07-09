@@ -1,0 +1,158 @@
+# 创建 Tag 的 GitHub Action 一般只基于 master 分支创建 tag
+# 触发方式：手动触发，可选择版本类型（patch/minor/major）或指定具体版本号
+#
+# 最佳实践：
+# 1. 使用 workflow_dispatch 手动触发，避免误操作
+# 2. 支持语义化版本（SemVer）：major.minor.patch
+# 3. 自动从最新 tag 递增版本号
+# 4. 可选择指定具体版本号覆盖自动递增
+# 5. 创建 annotated tag（带注释的 tag）而非 lightweight tag
+
+name: Create Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: '版本类型 (patch/minor/major), patch 是最小单位， minor 是次级单位， major 是主要单位'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: '自定义版本号 (可选，如 v1.2.3，留空则自动递增)'
+        required: false
+        type: string
+      tag_message:
+        description: 'Tag 注释信息 (留空则使用最近 commit 信息)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 需要写权限来创建 tag
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史，用于读取所有 tags
+
+      - name: Get Latest Tag
+        id: get_latest_tag
+        run: |
+          # 获取最新的 tag（按版本排序）
+          LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "📌 Latest tag: $LATEST_TAG"
+
+      - name: Calculate New Version
+        id: calc_version
+        run: |
+          LATEST_TAG="${{ steps.get_latest_tag.outputs.latest_tag }}"
+          CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          
+          # 如果指定了自定义版本号，直接使用
+          if [ -n "$CUSTOM_VERSION" ]; then
+            # 确保以 v 开头
+            if [[ ! "$CUSTOM_VERSION" =~ ^v ]]; then
+              CUSTOM_VERSION="v$CUSTOM_VERSION"
+            fi
+            NEW_TAG="$CUSTOM_VERSION"
+            echo "🔧 Using custom version: $NEW_TAG"
+          else
+            # 解析当前版本号
+            VERSION=${LATEST_TAG#v}  # 移除 v 前缀
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+            
+            # 根据版本类型递增
+            case "$VERSION_TYPE" in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+            
+            NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+            echo "🔢 Auto incremented ($VERSION_TYPE): $LATEST_TAG -> $NEW_TAG"
+          fi
+          
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Check Tag Exists
+        id: check_tag
+        run: |
+          NEW_TAG="${{ steps.calc_version.outputs.new_tag }}"
+          if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+            echo "❌ Tag $NEW_TAG already exists!"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "✅ Tag $NEW_TAG is available"
+          echo "exists=false" >> $GITHUB_OUTPUT
+
+      - name: Generate Tag Message
+        id: tag_message
+        run: |
+          INPUT_MESSAGE="${{ github.event.inputs.tag_message }}"
+          
+          if [ -z "$INPUT_MESSAGE" ] || [ "$INPUT_MESSAGE" = "Release" ]; then
+            # 未填写或使用默认值时，自动获取最近 commit 信息
+            COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+            COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an")
+            TAG_MESSAGE="$COMMIT_MSG (by $COMMIT_AUTHOR)"
+            echo "📝 Auto-generated message from latest commit"
+          else
+            TAG_MESSAGE="$INPUT_MESSAGE"
+            echo "📝 Using custom message"
+          fi
+          
+          echo "message=$TAG_MESSAGE" >> $GITHUB_OUTPUT
+          echo "Tag message: $TAG_MESSAGE"
+
+      - name: Create and Push Tag
+        run: |
+          NEW_TAG="${{ steps.calc_version.outputs.new_tag }}"
+          TAG_MESSAGE="${{ steps.tag_message.outputs.message }}"
+          
+          # 配置 Git 用户信息
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 创建 annotated tag
+          git tag -a "$NEW_TAG" -m "$TAG_MESSAGE"
+          
+          # 推送 tag
+          git push origin "$NEW_TAG"
+          
+          echo "🎉 Successfully created and pushed tag: $NEW_TAG"
+
+      - name: Summary
+        run: |
+          echo "## 🏷️ Tag Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Previous Tag | ${{ steps.get_latest_tag.outputs.latest_tag }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| New Tag | ${{ steps.calc_version.outputs.new_tag }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Type | ${{ github.event.inputs.version_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Message | ${{ steps.tag_message.outputs.message }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
