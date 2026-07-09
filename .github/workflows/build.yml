@@ -1,11 +1,9 @@
-# 编译与测试 —— 基于 Tag 自动触发，也可手动选择 Tag 或分支触发。
-# 编译前先跑全部测试，通过后编译 linux/amd64 和 darwin/arm64 两个平台。
-#
-# 触发方式：
-# 1. 自动：任意 tag 推送时自动触发（配合 create-tag.yml 使用）
+# 编译与测试 —— 三种触发方式：
+# 1. 自动：任意 tag 推送时
 # 2. 手动：workflow_dispatch，可选择 tag 或分支
+# 3. 被调用：被 create-tag.yml 通过 workflow_call 调用
 
-name: Build and Test
+name: Build
 
 on:
   # 自动触发：任意 tag 推送时
@@ -22,6 +20,19 @@ on:
         default: 'master'
         type: string
 
+  # 被 create-tag.yml 调用（打完 tag 后自动触发编译+发布）
+  workflow_call:
+    inputs:
+      ref:
+        description: '要构建的 tag 或分支'
+        required: true
+        type: string
+      is_tag:
+        description: '是否为 tag 触发（控制是否创建 Release）'
+        required: false
+        type: boolean
+        default: false
+
 jobs:
   # ------------------------------------------------------------------
   # 第一阶段：测试
@@ -32,8 +43,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # 手动触发时使用指定的 ref；自动触发时使用当前 tag
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          # 优先级：workflow_call > workflow_dispatch > push
+          ref: ${{ inputs.ref || github.event.inputs.ref || github.ref }}
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -60,7 +71,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.event.inputs.ref || github.ref }}
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -83,8 +94,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    # 仅在 tag 推送时创建 Release，手动触发（分支）时跳过。
-    if: startsWith(github.ref, 'refs/tags/')
+    # 仅在 tag 场景创建 Release：push tag 或 workflow_call 传了 is_tag=true。
+    if: startsWith(github.ref, 'refs/tags/') || inputs.is_tag
     permissions:
       contents: write  # 创建 Release 需要写权限
 
@@ -104,7 +115,8 @@ jobs:
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          # Release 对应的 tag：workflow_call 时用传入的 ref，否则用当前 ref。
+          tag_name: ${{ inputs.ref || github.ref_name }}
           name: ${{ github.ref_name }}
           # 自动以 tag message 作为 Release 描述（若 tag 是 annotated）。
           body: |
