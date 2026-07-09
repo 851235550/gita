@@ -115,21 +115,33 @@ jobs:
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          # Release 对应的 tag：workflow_call 时用传入的 ref，否则用当前 ref。
+          # Release title 和 tag 统一使用 ref（workflow_call 传入的 tag 名），
+          # 回退到 github.ref_name（push tag 时自动为 tag 名）。
           tag_name: ${{ inputs.ref || github.ref_name }}
-          name: ${{ github.ref_name }}
-          # 自动以 tag message 作为 Release 描述（若 tag 是 annotated）。
+          name: ${{ inputs.ref || github.ref_name }}
           body: |
-            ## 变更
+            > 此 Release 由 Gita CI 自动生成。
 
-            详见 commit history。
+            ## 📥 下载
 
-            ## 下载
+            - **Linux x86_64**: `gita-linux-amd64`
+            - **macOS Apple Silicon**: `gita-darwin-arm64`
 
-            | 文件 | 平台 |
-            |------|------|
-            | `gita-linux-amd64` | Linux x86_64 |
-            | `gita-darwin-arm64` | macOS Apple Silicon (M1/M2/M3/M4) |
+            ## 🔧 安装
+
+            ```bash
+            # Linux
+            chmod +x gita-linux-amd64
+            sudo mv gita-linux-amd64 /usr/local/bin/gita
+
+            # macOS
+            chmod +x gita-darwin-arm64
+            sudo mv gita-darwin-arm64 /usr/local/bin/gita
+            ```
+
+            ## 📝 变更
+
+            详见 [commit history](https://github.com/${{ github.repository }}/commits/${{ inputs.ref || github.ref_name }})。
           files: artifacts/*
           draft: false
           prerelease: false
