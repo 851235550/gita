@@ -2,6 +2,8 @@
 
 Gita 是一个基于 Git 与大语言模型（LLM）的 CLI 工具，自动分析 `git diff --staged` 内容，生成高质量的 Commit Message。
 
+<img width="1430" height="1542" alt="image" src="https://github.com/user-attachments/assets/5b08ddeb-90aa-4706-ac18-8b5b0aeb0c2f" />
+
 ---
 
 ## 快速开始
