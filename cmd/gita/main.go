@@ -209,11 +209,8 @@ func runCommit(flags *commitFlags) error {
 			return nil
 
 		case interactEdit:
-			if err := execGitCommit(editedMsg); err != nil {
-				return fmt.Errorf("git commit 执行失败: %w", err)
-			}
-			fmt.Println("✓ 提交成功")
-			return nil
+			// 编辑后回到确认循环，让用户再次确认后再提交。
+			currentMsg = editedMsg
 
 		case interactRegenerate:
 			// 重新生成：每次调用 LLM 视为全新请求，

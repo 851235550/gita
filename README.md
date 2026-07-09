@@ -171,6 +171,12 @@ feat(deployment): 初始化部署记录管理服务项目基础架构
 [Y] 确认提交  [e] 编辑后提交  [r] 重新生成  [n] 取消
 ```
 
+选择 `e` 编辑时，会打开 `GITA_EDITOR` 指定的编辑器（默认 `vi`），编辑后回到确认界面再次确认。可通过环境变量切换编辑器：
+
+```bash
+export GITA_EDITOR="code --wait" # 使用 VS Code
+```
+
 ---
 
 ## 工作原理
@@ -184,7 +190,7 @@ git diff --staged
     ↓
 调用 LLM（DeepSeek / OpenAI / Claude）
     ↓
-用户确认 / 编辑 / 重新生成 / 取消
+用户确认 / 编辑器修改 / 重新生成 / 取消
     ↓
 git commit -m "..."
 ```
@@ -226,12 +232,12 @@ git commit -m "..."
 
 ## 支持的环境变量
 
-| 变量                     | 说明                                                 |
-| ------------------------ | ---------------------------------------------------- |
-| `GITA_DEEPSEEK_API_KEY`  | DeepSeek API Key                                     |
-| `GITA_OPENAI_API_KEY`    | OpenAI API Key                                       |
-| `GITA_ANTHROPIC_API_KEY` | Claude API Key                                       |
-| `EDITOR`                 | 编辑模式使用的编辑器（可选，未设置时降级为内置输入） |
+| 变量                     | 说明                                              |
+| ------------------------ | ------------------------------------------------- |
+| `GITA_DEEPSEEK_API_KEY`  | DeepSeek API Key                                  |
+| `GITA_OPENAI_API_KEY`    | OpenAI API Key                                    |
+| `GITA_ANTHROPIC_API_KEY` | Claude API Key                                    |
+| `GITA_EDITOR`            | 编辑模式使用的编辑器（可选，未设置时默认使用 vi） |
 
 ---
 

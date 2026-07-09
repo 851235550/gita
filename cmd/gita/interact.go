@@ -86,20 +86,13 @@ func (c *interactConfirmer) printMessage(msg string) {
 	fmt.Fprintln(c.out, "─────────────────────────")
 }
 
-// openEditor 打开 $EDITOR 供用户编辑 commit message。
-// 若 $EDITOR 未设置，降级为内置简单输入（读取一行 stdin）。
-// 降级而非报错，因为 $EDITOR 不是 Gita 的强制依赖。
+// openEditor 打开外部编辑器供用户编辑 commit message。
+// 优先使用 GITA_EDITOR 环境变量，未设置时默认使用 vi。
+// vi 是 macOS 和 Linux 都预装的编辑器，兼容性最好。
 func (c *interactConfirmer) openEditor(msg string) (string, error) {
-	editor := os.Getenv("EDITOR")
+	editor := os.Getenv("GITA_EDITOR")
 	if editor == "" {
-		// 降级：$EDITOR 未设置时，使用内置简单输入。
-		fmt.Fprintln(c.out, "$EDITOR 未设置，请直接输入编辑后的 Commit Message（回车提交）:")
-		reader := bufio.NewReader(c.in)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return "", fmt.Errorf("读取编辑输入失败: %w", err)
-		}
-		return strings.TrimSpace(input), nil
+		editor = "vi"
 	}
 
 	// 将当前消息写入临时文件供编辑器修改。
