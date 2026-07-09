@@ -2,7 +2,8 @@
 
 Gita 是一个基于 Git 与大语言模型（LLM）的 CLI 工具，自动分析 `git diff --staged` 内容，生成高质量的 Commit Message。
 
-<img width="1430" height="1542" alt="image" src="https://github.com/user-attachments/assets/5b08ddeb-90aa-4706-ac18-8b5b0aeb0c2f" />
+<img width="1196" height="944" alt="82f7f404-5eed-48eb-928e-66c0906667eb" src="https://github.com/user-attachments/assets/8eaaaa63-2b30-408c-959f-38f008a2c93b" />
+
 
 ---
 
@@ -274,3 +275,18 @@ go test ./...
 # 端到端测试
 go test ./cmd/gita/ -v -run "E2E"
 ```
+
+### 项目优点：
+✅ 不在代码中硬编码密钥 - API Key 完全通过环境变量读取（GITA_DEEPSEEK_API_KEY 等）
+✅ 不持久化到磁盘 - 密钥仅存于运行时内存，配置文件明确禁止写入 API Key
+✅ 三级优先级机制（按优先顺序）：
+1. 命令行参数 --api-key （临时，不落盘）
+2. 环境变量（由 api_key_env 指定）
+3. 配置文件中的 api_key_env 指向具体的环境变量名
+✅ 仅依赖 gopkg.in/yaml.v3 v3.0.1（成熟稳定的 YAML 解析库）
+✅ 没有多层依赖链，降低了供应链风险
+✅ go.mod 和 go.sum 完整且一致
+✅ Git diff 数据基于本地 Git 命令执行，不接受不可信输入
+✅ JSON 响应完整校验，异常处理覆盖全面
+✅ 超大 diff（≥15000 行）时强制用户确认，防止无意中发送大量数据
+✅ 完整的单元测试和 E2E 测试覆盖
