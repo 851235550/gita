@@ -281,6 +281,11 @@ go test ./...
 go test ./cmd/gita/ -v -run "E2E"
 ```
 
+### SKILL 使用
+
+1. 将 `/docs/SKILL.md` 放入 `~/.copilot/skills/gca/` 目录
+2. 然后在 VsCode copilot 对话框中输入 `/gca`，回车即可
+
 ### 项目优点：
 
 - ✅ 不在代码中硬编码密钥 - API Key 完全通过环境变量读取（GITA_DEEPSEEK_API_KEY 等）
