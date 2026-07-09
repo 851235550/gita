@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -43,6 +44,11 @@ func run(args []string) error {
 	case "commit":
 		flags, err := parseCommitFlags(args[1:])
 		if err != nil {
+			// --help 或 -h 属于正常请求，打印帮助后正常退出，不视为错误。
+			if err == flag.ErrHelp {
+				printCommitHelp()
+				return nil
+			}
 			return fmt.Errorf("参数错误: %w", err)
 		}
 		return runCommit(flags)
@@ -145,12 +151,22 @@ func runCommit(flags *commitFlags) error {
 		providerName = flags.Provider
 	}
 
+	// 将语言代码转为自然语言描述，让 LLM 更准确地遵循语言要求。
+	// zh-CN → "中文"，en → "English"，其余原样传递。
+	languageDisplay := language
+	switch language {
+	case "zh-CN":
+		languageDisplay = "中文"
+	case "en":
+		languageDisplay = "English"
+	}
+
 	renderedPrompt := prompt.Render(tmpl, map[string]string{
 		"diff":      content,
 		"stat":      stat,
 		"file_list": strings.Join(fileNames, "\n"),
 		"hint":      flags.Hint,
-		"language":  language,
+		"language":  languageDisplay,
 		"style":     style,
 	})
 
