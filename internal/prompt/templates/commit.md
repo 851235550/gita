@@ -4,6 +4,7 @@
 
 - 请使用 {{language}} 输出 Commit Message。当 language 为 zh-CN 时，必须用中文撰写；当 language 为 en 时，必须用英文撰写。
 - 风格：{{style}}（conventional 表示 Conventional Commits 格式，如 "feat(scope): 描述"；plain 表示纯文本，无 type/scope 前缀）
+- 标题中禁止使用 Markdown 语法（反引号、星号、下划线等），保持纯文本风格
   {{hint}}
 
 ## 变更统计
